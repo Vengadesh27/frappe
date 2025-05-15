@@ -705,7 +705,7 @@
    "default": "0",
    "fieldname": "absolute_datetime",
    "fieldtype": "Check",
-   "label": "Show absolute date and time in a timeline"
+   "label": "Show absolute date and time in timeline"
   }
  ],
  "icon": "fa fa-cog",
