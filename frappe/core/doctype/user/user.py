@@ -126,6 +126,7 @@ class User(Document):
 		search_bar: DF.Check
 		send_me_a_copy: DF.Check
 		send_welcome_email: DF.Check
+		show_absolute_datetime_foramt: DF.Check
 		simultaneous_sessions: DF.Int
 		social_logins: DF.Table[UserSocialLogin]
 		thread_notify: DF.Check
