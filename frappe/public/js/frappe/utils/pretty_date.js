@@ -77,19 +77,7 @@ function prettyDate(date, mini) {
 
 frappe.provide("frappe.datetime");
 window.comment_when = function (datetime, mini) {
-	const date_format_setting = (frappe.boot.sysdefaults.date_format || "dd-mm-yyyy").replace(
-		/dd/g,
-		"DD"
-	);
-	const time_format_setting = frappe.boot.sysdefaults.time_format || "HH:mm:ss";
-
-	let absolute = frappe.boot.user.show_absolute_datetime_foramt;
-	if (absolute === undefined || absolute === null) {
-		return '<span class="frappe-timestamp"></span>';
-	}
-	let formatString = `${date_format_setting} ${time_format_setting}`;
-	const timestamp = moment(datetime).format(formatString);
-	const formatted_datetime = moment(datetime).format(formatString);
+	var timestamp = frappe.datetime.str_to_user ? frappe.datetime.str_to_user(datetime) : datetime;
 	return (
 		'<span class="frappe-timestamp ' +
 		(mini ? " mini" : "") +
@@ -98,7 +86,7 @@ window.comment_when = function (datetime, mini) {
 		'" title="' +
 		timestamp +
 		'">' +
-		(absolute == 1 ? formatted_datetime : prettyDate(datetime, mini)) +
+		prettyDate(datetime, mini) +
 		"</span>"
 	);
 };
