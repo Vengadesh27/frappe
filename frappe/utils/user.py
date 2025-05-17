@@ -225,7 +225,10 @@ class UserPermissions:
 				"last_name",
 				"mute_sounds",
 				"send_me_a_copy",
+<<<<<<< HEAD
 				"show_absolute_datetime_foramt",
+=======
+>>>>>>> 0d30973ec749e82aa79738f801c3d5a70cace024
 				"user_type",
 				"onboarding_status",
 				"default_workspace",
