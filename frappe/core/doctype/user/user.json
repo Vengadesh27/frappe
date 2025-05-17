@@ -62,6 +62,7 @@
   "form_sidebar",
   "timeline",
   "dashboard",
+  "show_absolute_datetime_foramt",
   "change_password",
   "new_password",
   "logout_all_sessions",
@@ -833,7 +834,7 @@
    "default": "0",
    "fieldname": "show_absolute_datetime_foramt",
    "fieldtype": "Check",
-   "label": "Show absolute datetime"
+   "label": "Show absolute datetime format in timeline"
   }
  ],
  "icon": "fa fa-user",
