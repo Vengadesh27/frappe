@@ -57,7 +57,6 @@
   "list_sidebar",
   "bulk_actions",
   "view_switcher",
-  "show_absolute_datetime_foramt",
   "form_settings_section",
   "form_sidebar",
   "timeline",
@@ -828,12 +827,6 @@
    "fieldname": "dashboard",
    "fieldtype": "Check",
    "label": "Dashboard"
-  },
-  {
-   "default": "0",
-   "fieldname": "show_absolute_datetime_foramt",
-   "fieldtype": "Check",
-   "label": "Show absolute datetime"
   }
  ],
  "icon": "fa fa-user",
@@ -892,7 +885,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2025-05-17 19:44:19.121143",
+ "modified": "2025-03-17 11:29:39.254304",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "User",

@@ -225,7 +225,6 @@ class UserPermissions:
 				"last_name",
 				"mute_sounds",
 				"send_me_a_copy",
-				"show_absolute_datetime_foramt",
 				"user_type",
 				"onboarding_status",
 				"default_workspace",
