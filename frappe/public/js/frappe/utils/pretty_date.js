@@ -75,62 +75,33 @@ function prettyDate(date, mini) {
 	}
 }
 
-
 frappe.provide("frappe.datetime");
 
-window.absolute_datetime_setting = 0;
-window.date_format_setting = "dd-mm-yyyy" ;
-window.time_format_setting = "HH:mm:ss";
-
-frappe.db.get_single_value("System Settings", "absolute_datetime").then(val => {
-    window.absolute_datetime_setting = val;
-});
-frappe.db.get_single_value("System Settings", "date_format").then(val => {
-    window.date_format_setting = val || "dd-mm-yyyy"; 
-});
-frappe.db.get_single_value("System Settings", "time_format").then(val => {
-    window.time_format_setting = val || "HH:mm:ss"; 
-});
-
-function convertFrappeToMomentFormat(frappeFormat) {
-    return frappeFormat
-        .replace(/dd/g, 'DD')
-        .replace(/mm/g, 'MM')
-        .replace(/yyyy/g, 'YYYY')
-        .replace(/yy/g, 'YY');
-}
-
 window.comment_when = function (datetime, mini) {
-    const timestamp = frappe.datetime.str_to_user
-        ? frappe.datetime.str_to_user(datetime)
-        : datetime;
 
-    const absolute = window.absolute_datetime_setting;
+    const date_format_setting = (frappe.boot.sysdefaults.date_format || "dd-mm-yyyy").replace(/dd/g, "DD");
+    const time_format_setting = frappe.boot.sysdefaults.time_format || "HH:mm:ss";
 
-    let frappeDateFormat = window.date_format_setting ;
-    let frappeTimeFormat = window.time_format_setting ;
+    let absolute = frappe.boot.absolute_date_format;
+    console.log("absolute : " + absolute);
 
-    let momentDateFormat = convertFrappeToMomentFormat(frappeDateFormat);
-	momentDateFormat = momentDateFormat.replaceAll('/', '-');
-
-    let momentTimeFormat = convertFrappeToMomentFormat(frappeTimeFormat);
-
-    if (absolute === null) {
+    if (absolute === undefined) {
         return '<span class="frappe-timestamp"></span>';
     }
 
-    let formatString = `${momentDateFormat} ${momentTimeFormat}`;
+    let formatString = `${date_format_setting} ${time_format_setting}`;
+    const timestamp = moment(datetime).format(formatString);
     const formatted_datetime = moment(datetime).format(formatString);
 
     return (
         '<span class="frappe-timestamp ' +
         (mini ? " mini" : "") +
-        '" data-timestamp="' +
+        '" data-timestamp="' + 
         datetime +
         '" title="' +
         timestamp +
         '">' +
-        (absolute === 1 ? formatted_datetime : prettyDate(datetime, mini)) +
+        (absolute == 1 ? formatted_datetime : prettyDate(datetime, mini)) +
         "</span>"
     );
 };
