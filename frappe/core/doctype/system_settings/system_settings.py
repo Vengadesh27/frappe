@@ -35,9 +35,13 @@ class SystemSettings(Document):
 		country: DF.Link | None
 		currency: DF.Link | None
 		currency_precision: DF.Literal["", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+<<<<<<< HEAD
 		date_format: DF.Literal[
 			"yyyy-mm-dd", "dd-mm-yyyy", "dd/mm/yyyy", "dd.mm.yyyy", "mm/dd/yyyy", "mm-dd-yyyy"
 		]
+=======
+		date_format: DF.Literal["yyyy-mm-dd", "dd-mm-yyyy", "dd/mm/yyyy", "dd.mm.yyyy", "mm/dd/yyyy", "mm-dd-yyyy"]
+>>>>>>> 0d30973ec749e82aa79738f801c3d5a70cace024
 		default_app: DF.Literal[None]
 		deny_multiple_sessions: DF.Check
 		disable_change_log_notification: DF.Check

@@ -704,7 +704,11 @@
  "icon": "fa fa-cog",
  "issingle": 1,
  "links": [],
+<<<<<<< HEAD
+ "modified": "2025-04-15 14:12:11.443610",
+=======
  "modified": "2025-05-16 22:10:27.590981",
+>>>>>>> 0d30973ec749e82aa79738f801c3d5a70cace024
  "modified_by": "Administrator",
  "module": "Core",
  "name": "System Settings",
