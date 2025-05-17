@@ -178,19 +178,10 @@ def get():
 	}
 
 	bootinfo["desk_theme"] = frappe.get_cached_value("User", frappe.session.user, "desk_theme") or "Light"
-<<<<<<< HEAD
-=======
-	bootinfo["absolute_date_format"] =  frappe.get_cached_value("User", frappe.session.user, "show_absolute_datetime_foramt") or 0
->>>>>>> 0d30973ec749e82aa79738f801c3d5a70cace024
 	bootinfo["user"]["impersonated_by"] = frappe.session.data.get("impersonated_by")
 	bootinfo["navbar_settings"] = frappe.client_cache.get_doc("Navbar Settings")
 	bootinfo.has_app_updates = has_app_update_notifications()
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> 0d30973ec749e82aa79738f801c3d5a70cace024
 	return bootinfo
 
 

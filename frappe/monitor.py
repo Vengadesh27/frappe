@@ -11,10 +11,7 @@ import rq
 
 import frappe
 from frappe.utils.data import cint
-<<<<<<< HEAD
 from frappe.utils.synchronization import filelock
-=======
->>>>>>> 0d30973ec749e82aa79738f801c3d5a70cace024
 
 MONITOR_REDIS_KEY = "monitor-transactions"
 MONITOR_MAX_ENTRIES = 1000000
@@ -126,7 +123,6 @@ class Monitor:
 
 
 def flush():
-<<<<<<< HEAD
 	logs = frappe.cache.lrange(MONITOR_REDIS_KEY, 0, -1)
 	if not logs:
 		return
@@ -139,17 +135,3 @@ def flush():
 
 	# Remove fetched entries from cache
 	frappe.cache.ltrim(MONITOR_REDIS_KEY, len(logs) - 1, -1)
-=======
-	try:
-		# Fetch all the logs without removing from cache
-		logs = frappe.cache.lrange(MONITOR_REDIS_KEY, 0, -1)
-		if logs:
-			logs = list(map(frappe.safe_decode, logs))
-			with open(log_file(), "a") as f:
-				f.write("\n".join(logs))
-				f.write("\n")
-			# Remove fetched entries from cache
-			frappe.cache.ltrim(MONITOR_REDIS_KEY, len(logs) - 1, -1)
-	except Exception:
-		traceback.print_exc()
->>>>>>> 0d30973ec749e82aa79738f801c3d5a70cace024
