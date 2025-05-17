@@ -224,6 +224,7 @@ class UserPermissions:
 				"language",
 				"last_name",
 				"mute_sounds",
+				"show_absolute_datetime_foramt",
 				"send_me_a_copy",
 				"user_type",
 				"onboarding_status",
