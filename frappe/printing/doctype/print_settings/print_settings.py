@@ -18,8 +18,6 @@ class PrintSettings(Document):
 
 		add_draft_heading: DF.Check
 		allow_page_break_inside_tables: DF.Check
-		allow_print_for_cancelled: DF.Check
-		allow_print_for_draft: DF.Check
 		enable_print_server: DF.Check
 		enable_raw_printing: DF.Check
 		font: DF.Literal["Default", "Helvetica Neue", "Arial", "Helvetica", "Inter", "Verdana", "Monospace"]

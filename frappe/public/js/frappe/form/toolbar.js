@@ -342,9 +342,8 @@ frappe.ui.form.Toolbar = class Toolbar {
 	}
 
 	add_print() {
-		const print_settings = frappe.model.get_doc(":Print Settings", "Print Settings");
-		const allow_print_for_draft = cint(print_settings.allow_print_for_draft);
-		const allow_print_for_cancelled = cint(print_settings.allow_print_for_cancelled);
+		const allow_print_for_draft = cint(this.frm.meta.allow_print_for_draft);
+		const allow_print_for_cancelled = cint(this.frm.meta.allow_print_for_cancelled);
 
 		if (
 			!frappe.model.is_submittable(this.frm.doc.doctype) ||
