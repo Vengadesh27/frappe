@@ -43,6 +43,8 @@ class CustomizeForm(Document):
 		allow_auto_repeat: DF.Check
 		allow_copy: DF.Check
 		allow_import: DF.Check
+		allow_print_for_cancelled: DF.Check
+		allow_print_for_draft: DF.Check
 		autoname: DF.Data | None
 		default_email_template: DF.Link | None
 		default_print_format: DF.Link | None
@@ -747,6 +749,8 @@ doctype_properties = {
 	"force_re_route_to_default_view": "Check",
 	"translated_doctype": "Check",
 	"grid_page_length": "Int",
+	"allow_print_for_draft": "Check",
+	"allow_print_for_cancelled": "Check",
 }
 
 docfield_properties = {

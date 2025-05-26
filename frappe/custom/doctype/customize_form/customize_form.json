@@ -34,6 +34,8 @@
   "allow_copy",
   "make_attachments_public",
   "protect_attached_files",
+  "allow_print_for_draft",
+  "allow_print_for_cancelled",
   "view_settings_section",
   "title_field",
   "show_title_field_in_link",
@@ -415,6 +417,18 @@
    "fieldname": "protect_attached_files",
    "fieldtype": "Check",
    "label": "Protect Attached Files"
+  },
+  {
+   "default": "1",
+   "fieldname": "allow_print_for_draft",
+   "fieldtype": "Check",
+   "label": "Allow Print for Draft"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_print_for_cancelled",
+   "fieldtype": "Check",
+   "label": "Allow Print for Cancelled"
   }
  ],
  "hide_toolbar": 1,
@@ -423,7 +437,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-03-27 18:22:32.618603",
+ "modified": "2025-05-26 20:58:19.948987",
  "modified_by": "Administrator",
  "module": "Custom",
  "name": "Customize Form",
