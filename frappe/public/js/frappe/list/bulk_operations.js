@@ -6,9 +6,11 @@ export default class BulkOperations {
 
 	print(docs) {
 		const print_settings = frappe.model.get_doc(":Print Settings", "Print Settings");
-		const allow_print_for_draft = cint(print_settings.allow_print_for_draft);
+		const allow_print_for_draft = cint(frappe.get_meta(this.doctype).allow_print_for_draft);
 		const is_submittable = frappe.model.is_submittable(this.doctype);
-		const allow_print_for_cancelled = cint(print_settings.allow_print_for_cancelled);
+		const allow_print_for_cancelled = cint(
+			frappe.get_meta(this.doctype).allow_print_for_cancelled
+		);
 		const letterheads = this.get_letterhead_options();
 		const MAX_PRINT_LIMIT = 500;
 		const BACKGROUND_PRINT_THRESHOLD = 25;

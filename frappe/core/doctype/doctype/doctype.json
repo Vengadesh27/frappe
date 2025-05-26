@@ -56,6 +56,8 @@
   "allow_events_in_timeline",
   "allow_auto_repeat",
   "make_attachments_public",
+  "allow_print_for_draft",
+  "allow_print_for_cancelled",
   "view_settings",
   "show_title_field_in_link",
   "translated_doctype",
@@ -706,6 +708,20 @@
    "fieldtype": "Int",
    "label": "Rows Threshold for Grid Search",
    "non_negative": 1
+  },
+  {
+   "default": "0",
+   "depends_on": "is_submittable",
+   "fieldname": "allow_print_for_draft",
+   "fieldtype": "Check",
+   "label": "Allow Print for Draft"
+  },
+  {
+   "default": "0",
+   "depends_on": "is_submittable",
+   "fieldname": "allow_print_for_cancelled",
+   "fieldtype": "Check",
+   "label": "Allow Print for Cancelled"
   }
  ],
  "grid_page_length": 50,
@@ -784,7 +800,7 @@
    "link_fieldname": "document_type"
   }
  ],
- "modified": "2025-05-21 21:58:59.947374",
+ "modified": "2025-05-26 22:58:30.588110",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "DocType",
