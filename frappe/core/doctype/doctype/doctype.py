@@ -105,8 +105,6 @@ class DocType(Document):
 		allow_events_in_timeline: DF.Check
 		allow_guest_to_view: DF.Check
 		allow_import: DF.Check
-		allow_print_for_cancelled: DF.Check
-		allow_print_for_draft: DF.Check
 		allow_rename: DF.Check
 		autoname: DF.Data | None
 		beta: DF.Check
