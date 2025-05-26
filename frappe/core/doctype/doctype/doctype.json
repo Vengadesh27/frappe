@@ -702,14 +702,14 @@
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.is_submittable",
+   "depends_on": "is_submittable",
    "fieldname": "allow_print_for_cancelled",
    "fieldtype": "Check",
    "label": "Allow Print for Cancelled"
   },
   {
    "default": "0",
-   "depends_on": "eval:doc.is_submittable",
+   "depends_on": "is_submittable",
    "fieldname": "allow_print_for_draft",
    "fieldtype": "Check",
    "label": "Allow Print for Draft"
@@ -791,7 +791,7 @@
    "link_fieldname": "document_type"
   }
  ],
- "modified": "2025-05-26 22:19:35.151597",
+ "modified": "2025-05-26 22:37:42.487038",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "DocType",
