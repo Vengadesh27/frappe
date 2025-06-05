@@ -24,8 +24,8 @@ NestedSetHierarchy = (
 	"not descendants of",
 	"descendants of (inclusive)",
 )
-# split when whitespace or backtick is found
-QUERY_TYPE_PATTERN = re.compile(r"\s*([^\s`]*)")
+# split when non-alphabetical character is found
+QUERY_TYPE_PATTERN = re.compile(r"\s*([A-Za-z]*)")
 
 
 def convert_to_value(o: FilterValue):
