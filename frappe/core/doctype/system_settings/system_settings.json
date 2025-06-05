@@ -15,6 +15,7 @@
   "enable_onboarding",
   "setup_complete",
   "disable_document_sharing",
+  "hide_shared_with_users_in_sidebar",
   "date_and_number_format",
   "date_format",
   "time_format",
@@ -25,6 +26,7 @@
   "float_precision",
   "currency_precision",
   "rounding_method",
+  "show_absolute_datetime_in_timeline",
   "permissions",
   "apply_strict_user_permissions",
   "column_break_21",
@@ -707,12 +709,24 @@
    "fieldname": "max_report_rows",
    "fieldtype": "Int",
    "label": "Max Report Rows"
+  },
+  {
+   "default": "0",
+   "fieldname": "hide_shared_with_users_in_sidebar",
+   "fieldtype": "Check",
+   "label": "Hide Shared with Users in Sidebar"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_absolute_datetime_in_timeline",
+   "fieldtype": "Check",
+   "label": "Show Absolute Datetime in Timeline"
   }
  ],
  "icon": "fa fa-cog",
  "issingle": 1,
  "links": [],
- "modified": "2025-05-19 14:17:40.748786",
+ "modified": "2025-06-06 00:23:26.873234",
  "modified_by": "Administrator",
  "module": "Core",
  "name": "System Settings",

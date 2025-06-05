@@ -63,6 +63,7 @@ class SystemSettings(Document):
 		force_web_capture_mode_for_uploads: DF.Check
 		hide_empty_read_only_fields: DF.Check
 		hide_footer_in_auto_email_reports: DF.Check
+		hide_shared_with_users_in_sidebar: DF.Check
 		language: DF.Link
 		lifespan_qrcode_image: DF.Int
 		link_field_results_limit: DF.Int
@@ -93,6 +94,7 @@ class SystemSettings(Document):
 		rounding_method: DF.Literal["Banker's Rounding (legacy)", "Banker's Rounding", "Commercial Rounding"]
 		session_expiry: DF.Data | None
 		setup_complete: DF.Check
+		show_absolute_datetime_in_timeline: DF.Check
 		store_attached_pdf_document: DF.Check
 		strip_exif_metadata_from_uploaded_images: DF.Check
 		time_format: DF.Literal["HH:mm:ss", "HH:mm"]

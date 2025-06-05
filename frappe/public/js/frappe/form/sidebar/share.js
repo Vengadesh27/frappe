@@ -26,7 +26,10 @@ frappe.ui.form.Share = class Share {
 
 		this.shares.empty();
 
-		if (!shared_users.length) {
+		if (
+			!shared_users.length ||
+			frappe.boot.sysdefaults.hide_shared_with_users_in_sidebar === "1"
+		) {
 			this.shares.hide();
 			return;
 		}
