@@ -97,6 +97,7 @@ def delete_session(sid=None, user=None, reason="Session Expired"):
 	logout_feed(user, reason)
 	frappe.db.delete("Sessions", {"sid": sid})
 	frappe.db.commit()
+	frappe.auth.LoginManager().run_trigger("on_session_end")
 
 	frappe.cache.hdel("session", sid)
 
