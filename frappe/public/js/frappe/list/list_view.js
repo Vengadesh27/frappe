@@ -152,6 +152,18 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 	setup_page() {
 		this.parent.list_view = this;
 		super.setup_page();
+		this.bind_new_doc_key();
+	}
+
+	bind_new_doc_key() {
+		const new_doc_url = `/app/${this.doctype.toLowerCase().replace(" ", "-")}/new`;
+		if (["List", "Report"].includes(this.view_name) && this.can_create) {
+			document.addEventListener("keydown", (e) => {
+				if (e.shiftKey && e.key === "N") {
+					window.location.href = new_doc_url;
+				}
+			});
+		}
 	}
 
 	setup_page_head() {
