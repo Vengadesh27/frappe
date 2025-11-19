@@ -94,7 +94,7 @@ class EmailAccount(Document):
 		imap_folder: DF.Table[IMAPFolder]
 		incoming_port: DF.Data | None
 		initial_sync_count: DF.Literal["100", "250", "500"]
-		last_synced_at: DF.Datetime | None
+		last_received_at: DF.Datetime | None
 		login_id: DF.Data | None
 		login_id_is_different: DF.Check
 		no_failed: DF.Int
@@ -159,7 +159,7 @@ class EmailAccount(Document):
 		if self.enable_incoming and self.use_imap and len(self.imap_folder) <= 0:
 			frappe.throw(_("You need to set one IMAP folder for {0}").format(frappe.bold(self.email_id)))
 
-		if frappe.local.flags.in_patch or frappe.local.flags.in_test:
+		if frappe.local.flags.in_patch or frappe.in_test:
 			return
 
 		use_oauth = self.auth_method == "OAuth"
@@ -363,9 +363,7 @@ class EmailAccount(Document):
 
 	@property
 	def _password(self):
-		raise_exception = not (
-			self.auth_method == "OAuth" or self.no_smtp_authentication or frappe.flags.in_test
-		)
+		raise_exception = not (self.auth_method == "OAuth" or self.no_smtp_authentication or frappe.in_test)
 		return self.get_password(raise_exception=raise_exception)
 
 	@property
@@ -565,7 +563,7 @@ class EmailAccount(Document):
 			self.set_failed_attempts_count(self.get_failed_attempts_count() + 1)
 
 	def _disable_broken_incoming_account(self, description):
-		if frappe.flags.in_test:
+		if frappe.in_test:
 			return
 		self.db_set("enable_incoming", 0)
 
@@ -648,9 +646,9 @@ class EmailAccount(Document):
 		try:
 			if self.service == "Frappe Mail":
 				frappe_mail_client = self.get_frappe_mail_client()
-				messages = frappe_mail_client.pull_raw(last_synced_at=self.last_synced_at)
+				messages = frappe_mail_client.pull_raw(last_received_at=self.last_received_at)
 				process_mail(messages)
-				self.db_set("last_synced_at", messages["last_synced_at"], update_modified=False)
+				self.db_set("last_received_at", messages["last_received_at"], update_modified=False)
 			else:
 				email_sync_rule = self.build_email_sync_rule()
 				email_server = self.get_incoming_server(in_receive=True, email_sync_rule=email_sync_rule)
@@ -952,7 +950,7 @@ def get_max_email_uid(email_account):
 			"sent_or_received": "Received",
 			"email_account": email_account,
 		},
-		fields=["max(uid) as uid"],
+		fields=[{"MAX": "uid", "as": "uid"}],
 	):
 		return cint(result[0].get("uid", 0)) + 1
 	return 1

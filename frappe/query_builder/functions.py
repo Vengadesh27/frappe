@@ -5,7 +5,15 @@ from pypika.functions import *
 from pypika.terms import Arithmetic, ArithmeticExpression, CustomFunction, Function
 
 import frappe
-from frappe.query_builder.custom import GROUP_CONCAT, MATCH, STRING_AGG, TO_TSVECTOR
+from frappe.query_builder.custom import (
+	GROUP_CONCAT,
+	MATCH,
+	STRING_AGG,
+	TO_TSVECTOR,
+	Month,
+	MonthName,
+	Quarter,
+)
 from frappe.query_builder.utils import ImportMapper, db_type_is
 
 from .utils import PseudoColumn
@@ -82,6 +90,11 @@ DateFormat = ImportMapper(
 		db_type_is.POSTGRES: ToChar,
 	}
 )
+
+
+class YearWeek(Function):
+	def __init__(self, term):
+		super().__init__("YEARWEEK", term, 1)
 
 
 class _PostgresUnixTimestamp(Extract):

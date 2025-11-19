@@ -10,6 +10,7 @@ import frappe.defaults
 import frappe.desk.form.meta
 import frappe.utils
 from frappe import _, _dict
+from frappe.core.doctype.permission_type.permission_type import get_doctype_ptype_map
 from frappe.desk.form.document_follow import is_document_followed
 from frappe.model.utils.user_settings import get_user_settings
 from frappe.permissions import check_doctype_permission, get_doc_permissions, has_permission
@@ -59,7 +60,7 @@ def getdoc(doctype, name):
 
 
 @frappe.whitelist()
-def getdoctype(doctype, with_parent=False, cached_timestamp=None):
+def getdoctype(doctype, with_parent=False):
 	"""load doctype"""
 
 	docs = []
@@ -74,9 +75,6 @@ def getdoctype(doctype, with_parent=False, cached_timestamp=None):
 		docs = get_meta_bundle(doctype)
 
 	frappe.response["user_settings"] = get_user_settings(parent_dt or doctype)
-
-	if cached_timestamp and docs[0].modified == cached_timestamp:
-		return "use_cache"
 
 	frappe.response.docs.extend(docs)
 
@@ -96,7 +94,7 @@ def get_docinfo(doc=None, doctype=None, name=None):
 	from frappe.share import _get_users as get_docshares
 
 	if not doc:
-		doc = frappe.get_doc(doctype, name)
+		doc = frappe.get_lazy_doc(doctype, name)
 		doc.check_permission("read")
 
 	all_communications = _get_communications(doc.doctype, doc.name, limit=21)
@@ -128,6 +126,7 @@ def get_docinfo(doc=None, doctype=None, name=None):
 			"is_document_followed": is_document_followed(doc.doctype, doc.name, frappe.session.user),
 			"tags": get_tags(doc.doctype, doc.name),
 			"document_email": get_document_email(doc.doctype, doc.name),
+			"custom_perm_types": get_doctype_ptype_map().get(doc.doctype, []),
 		}
 	)
 
@@ -205,7 +204,7 @@ def get_versions(doc: "Document") -> list[dict]:
 def get_communications(doctype, name, start=0, limit=20):
 	from frappe.utils import cint
 
-	doc = frappe.get_doc(doctype, name)
+	doc = frappe.get_lazy_doc(doctype, name)
 	doc.check_permission("read")
 
 	return _get_communications(doctype, name, cint(start), cint(limit))
@@ -450,7 +449,7 @@ def get_title_values_for_table_and_multiselect_fields(doc, table_fields=None):
 
 	if not table_fields:
 		meta = frappe.get_meta(doc.doctype)
-		table_fields = meta.get_table_fields()
+		table_fields = meta.get_table_fields(include_computed=True)
 
 	for field in table_fields:
 		if not doc.get(field.fieldname):

@@ -12,7 +12,7 @@ from email.policy import SMTP
 from typing import TYPE_CHECKING
 
 import frappe
-from frappe import _, safe_encode, task
+from frappe import _, are_emails_muted, safe_encode, task
 from frappe.core.utils import html2text
 from frappe.database.database import savepoint
 from frappe.email.doctype.email_account.email_account import EmailAccount
@@ -73,6 +73,9 @@ class EmailQueue(Document):
 	# end: auto-generated types
 
 	DOCTYPE = "Email Queue"
+
+	def onload(self):
+		self.set_onload("mute_emails", bool(are_emails_muted()))
 
 	def set_recipients(self, recipients):
 		self.set("recipients", [])
@@ -182,7 +185,7 @@ class EmailQueue(Document):
 				message = ctx.build_message(recipient.recipient)
 				if method := get_hook_method("override_email_send"):
 					method(self, self.sender, recipient.recipient, message)
-				elif not frappe.flags.in_test or frappe.flags.testing_email:
+				elif not frappe.in_test or frappe.flags.testing_email:
 					if ctx.email_account_doc.service == "Frappe Mail":
 						is_newsletter = self.reference_doctype == "Newsletter"
 						ctx.frappe_mail_client.send_raw(
@@ -200,7 +203,7 @@ class EmailQueue(Document):
 
 				ctx.update_recipient_status_to_sent(recipient)
 
-			if frappe.flags.in_test and not frappe.flags.testing_email:
+			if frappe.in_test and not frappe.flags.testing_email:
 				frappe.flags.sent_mail = message
 				return
 
@@ -514,6 +517,7 @@ class QueueBuilder:
 		with_container=False,
 		email_read_tracker_url=None,
 		x_priority: Literal[1, 3, 5] = 3,
+		email_headers=None,
 	):
 		"""Add email to sending queue (Email Queue)
 
@@ -540,6 +544,7 @@ class QueueBuilder:
 		:param with_container: Wraps email inside styled container
 		:param email_read_tracker_url: A URL for tracking whether an email is read by the recipient.
 		:param x_priority: 1 = HIGHEST, 3 = NORMAL, 5 = LOWEST
+		:param email_headers: Additional headers to be added in the email, e.g. {"X-Custom-Header": "value"} or {"Custom-Header": "value"}. Automatically prepends "X-" to the header name if not present.
 		"""
 
 		self._unsubscribe_method = unsubscribe_method
@@ -576,6 +581,7 @@ class QueueBuilder:
 		self.inline_images = inline_images
 		self.print_letterhead = print_letterhead
 		self.email_read_tracker_url = email_read_tracker_url
+		self.email_headers = email_headers
 
 	@property
 	def unsubscribe_method(self):
@@ -728,6 +734,10 @@ class QueueBuilder:
 		)
 
 		mail.set_message_id(self.message_id, self.is_notification)
+
+		if self.email_headers:
+			mail.add_headers(self.email_headers)
+
 		if self.read_receipt:
 			mail.msg_root["Disposition-Notification-To"] = self.sender
 		if self.in_reply_to:
@@ -766,7 +776,7 @@ class QueueBuilder:
 					job_name=frappe.utils.get_job_name(
 						"send_bulk_emails_for", self.reference_doctype, self.reference_name
 					),
-					now=frappe.flags.in_test or send_now,
+					now=frappe.in_test or send_now,
 					queue="long",
 				)
 

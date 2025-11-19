@@ -11,7 +11,7 @@ from frappe import _
 from frappe.desk.reportview import validate_args
 from frappe.model.db_query import check_parent_permission
 from frappe.model.utils import is_virtual_doctype
-from frappe.utils import get_safe_filters
+from frappe.utils import attach_expanded_links, get_safe_filters
 from frappe.utils.caching import http_cache
 
 if TYPE_CHECKING:
@@ -37,6 +37,7 @@ def get_list(
 	debug: bool = False,
 	as_dict: bool = True,
 	or_filters=None,
+	expand=None,
 ):
 	"""Return a list of records by filters, fields, ordering and limit.
 
@@ -64,7 +65,17 @@ def get_list(
 	)
 
 	validate_args(args)
-	return frappe.get_list(**args)
+	_list = frappe.get_list(**args)
+
+	if not expand:
+		return _list
+
+	if fields and not fields[0] == "*":
+		expand = [f for f in expand if f in fields]
+
+	attach_expanded_links(doctype, _list, expand)
+
+	return _list
 
 
 @frappe.whitelist()
@@ -312,7 +323,7 @@ def get_doc_permissions(doctype: str, docname: str):
 	:param doctype: DocType of the document to be evaluated
 	:param docname: `name` of the document to be evaluated
 	"""
-	doc = frappe.get_doc(doctype, docname)
+	doc = frappe.get_lazy_doc(doctype, docname)
 	return {"permissions": frappe.permissions.get_doc_permissions(doc)}
 
 
@@ -325,7 +336,7 @@ def get_password(doctype: str, name: str, fieldname: str):
 	:param fieldname: `fieldname` of the password property
 	"""
 	frappe.only_for("System Manager")
-	return frappe.get_doc(doctype, name).get_password(fieldname)
+	return frappe.get_lazy_doc(doctype, name).get_password(fieldname)
 
 
 from frappe.deprecation_dumpster import get_js as _get_js
@@ -361,7 +372,7 @@ def attach_file(
 	:param is_private: Attach file as private file (1 or 0)
 	:param docfield: file to attach to (optional)"""
 
-	doc = frappe.get_doc(doctype, docname)
+	doc = frappe.get_lazy_doc(doctype, docname)
 	doc.check_permission()
 
 	file = frappe.get_doc(

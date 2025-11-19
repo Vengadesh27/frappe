@@ -198,7 +198,7 @@ frappe.ui.keys.add_shortcut({
 });
 
 frappe.ui.keys.add_shortcut({
-	shortcut: "ctrl+g",
+	shortcut: "ctrl+k",
 	action: function (e) {
 		$("#navbar-search").focus();
 		e.preventDefault();
@@ -209,6 +209,16 @@ frappe.ui.keys.add_shortcut({
 
 frappe.ui.keys.add_shortcut({
 	shortcut: "ctrl+k",
+	action: function (e) {
+		$("#navbar-search").focus();
+		e.preventDefault();
+		return false;
+	},
+	description: __("Open Awesomebar"),
+});
+
+frappe.ui.keys.add_shortcut({
+	shortcut: "ctrl+g",
 	action: function (e) {
 		$("#navbar-search").focus();
 		e.preventDefault();
@@ -331,6 +341,7 @@ frappe.ui.keyCode = {
 function handle_escape_key() {
 	close_grid_and_dialog();
 	document.activeElement?.blur();
+	$(document).trigger("escape");
 }
 
 function close_grid_and_dialog() {
@@ -352,7 +363,7 @@ function close_grid_and_dialog() {
 frappe.ui.keys.add_shortcut({
 	shortcut: "shift+t",
 	action: function (e) {
-		if (!frappe.user.has_role("System Manager")) {
+		if (!frappe.model.can_write("System Console")) {
 			return;
 		}
 		if (cur_dialog?.is_minimized) {
@@ -365,3 +376,14 @@ frappe.ui.keys.add_shortcut({
 	},
 	description: __("Open console"),
 });
+
+$.fn.enterKey = function (fnc) {
+	return this.each(function () {
+		$(this).keypress(function (ev) {
+			var keycode = ev.keyCode ? ev.keyCode : ev.which;
+			if (keycode == "13") {
+				fnc.call(this, ev);
+			}
+		});
+	});
+};
