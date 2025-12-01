@@ -156,11 +156,10 @@ frappe.views.ListView = class ListView extends frappe.views.BaseList {
 	}
 
 	bind_new_doc_key() {
-		const new_doc_url = `/app/${this.doctype.toLowerCase().replace(" ", "-")}/new`;
 		if (["List", "Report"].includes(this.view_name) && this.can_create) {
 			document.addEventListener("keydown", (e) => {
 				if (e.shiftKey && e.key === "N") {
-					window.location.href = new_doc_url;
+					frappe.set_route("Form", this.doctype, "new");
 				}
 			});
 		}
