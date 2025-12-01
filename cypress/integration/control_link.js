@@ -1,11 +1,11 @@
 context("Control Link", () => {
 	before(() => {
 		cy.login();
-		cy.visit("/app/website");
+		cy.visit("/desk/website");
 	});
 
 	beforeEach(() => {
-		cy.visit("/app/website");
+		cy.visit("/desk/website");
 		cy.create_records({
 			doctype: "ToDo",
 			description: "this is a test todo for link",
@@ -108,7 +108,6 @@ context("Control Link", () => {
 	it("should show open link button", () => {
 		get_dialog_with_link().as("dialog");
 
-		cy.intercept("/api/method/frappe.client.validate_link*").as("validate_link");
 		cy.intercept("POST", "/api/method/frappe.desk.search.search_link").as("search_link");
 
 		cy.get("@todos").then((todos) => {
@@ -116,11 +115,11 @@ context("Control Link", () => {
 			cy.get("@input").focus();
 			cy.wait("@search_link");
 			cy.get("@input").type(todos[0]).blur();
-			cy.wait("@validate_link");
+			// not waiting for validate_link because it will not get called
 			cy.get("@input").trigger("mouseover");
 			cy.get(".frappe-control[data-fieldname=link] .btn-open")
 				.should("be.visible")
-				.should("have.attr", "href", `/app/todo/${todos[0]}`);
+				.should("have.attr", "href", `/desk/todo/${todos[0]}`);
 		});
 	});
 
@@ -176,7 +175,7 @@ context("Control Link", () => {
 
 	it("should update dependant fields (via fetch_from)", () => {
 		cy.get("@todos").then((todos) => {
-			cy.visit(`/app/todo/${todos[0]}`);
+			cy.visit(`/desk/todo/${todos[0]}`);
 			cy.intercept("POST", "/api/method/frappe.desk.search.search_link").as("search_link");
 			cy.intercept("/api/method/frappe.client.validate_link*").as("validate_link");
 
