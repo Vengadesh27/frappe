@@ -42,6 +42,7 @@ frappe.ui.Filter = class {
 			Date: ["like", "not like"],
 			Datetime: ["like", "not like", "in", "not in", "=", "!="],
 			Data: ["Between", "Timespan"],
+			Time: ["Between", "Timespan"],
 			Select: ["like", "not like", "Between", "Timespan"],
 			Link: ["Between", "Timespan", ">", "<", ">=", "<="],
 			Currency: ["Between", "Timespan"],
@@ -332,7 +333,6 @@ frappe.ui.Filter = class {
 			this.field.df.fieldname,
 			this.get_condition(),
 			this.get_selected_value(),
-			this.hidden,
 		];
 	}
 

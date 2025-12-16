@@ -1,15 +1,20 @@
 import copy
+import faulthandler
 import logging
+import sys
 from contextlib import AbstractContextManager, contextmanager
 from types import MappingProxyType
 
 import frappe
+from frappe.database.utils import get_query_type
 from frappe.utils import cint
 
 from ..utils.generators import get_missing_records_module_overrides, make_test_records
 from .unit_test_case import UnitTestCase
 
 logger = logging.Logger(__file__)
+
+STUCK_TEST_THRESHOLD = 5 * 60
 
 
 class IntegrationTestCase(UnitTestCase):
@@ -73,6 +78,8 @@ class IntegrationTestCase(UnitTestCase):
 		super().tearDownClass()
 
 	def setUp(self) -> None:
+		faulthandler.dump_traceback_later(STUCK_TEST_THRESHOLD, file=sys.__stderr__)
+		self.addCleanup(faulthandler.cancel_dump_traceback_later)
 		super().setUp()
 		# Add any per-test setup code here
 
@@ -112,18 +119,20 @@ class IntegrationTestCase(UnitTestCase):
 		self._secondary_connection.rollback()
 
 	@contextmanager
-	def assertQueryCount(self, count: int) -> AbstractContextManager[None]:
+	def assertQueryCount(self, count: int, query_type: tuple[str] | None = None):
 		queries = []
 
 		def _sql_with_count(*args, **kwargs):
 			ret = orig_sql(*args, **kwargs)
-			queries.append(args[0].last_query)
+			queries.append(str(args[0].last_query))
 			return ret
 
 		try:
 			orig_sql = frappe.db.__class__.sql
 			frappe.db.__class__.sql = _sql_with_count
 			yield
+			if query_type:
+				queries = [q for q in queries if get_query_type(q) in query_type]
 			self.assertLessEqual(len(queries), count, msg="Queries executed: \n" + "\n\n".join(queries))
 		finally:
 			frappe.db.__class__.sql = orig_sql
@@ -183,7 +192,7 @@ def _commit_watcher():
 
 
 def _rollback_db():
-	frappe.db.value_cache = {}
+	frappe.db.value_cache.clear()
 	frappe.db.rollback()
 
 

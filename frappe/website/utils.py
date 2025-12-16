@@ -94,7 +94,7 @@ def get_comment_list(doctype, name):
 
 
 def get_home_page():
-	if frappe.local.flags.home_page and not frappe.flags.in_test:
+	if frappe.local.flags.home_page and not frappe.in_test:
 		return frappe.local.flags.home_page
 
 	def _get_home_page():
@@ -125,9 +125,11 @@ def get_home_page():
 
 		home_page = home_page.strip("/")
 
+		if home_page == "me" and frappe.session.data.user_type == "System User":
+			home_page = "desk"
 		return home_page
 
-	if frappe.local.dev_server:
+	if frappe._dev_server:
 		# dont return cached homepage in development
 		return _get_home_page()
 
@@ -559,7 +561,7 @@ def build_response(path, data, http_status_code, headers: dict | None = None):
 
 	if headers:
 		for key, val in headers.items():
-			response.headers[key] = cstr(cstr(val).encode("ascii", errors="xmlcharrefreplace"))
+			response.headers[key] = cstr(cstr(val).encode("utf-8", errors="xmlcharrefreplace"))
 
 	return response
 
@@ -605,3 +607,9 @@ def is_binary_file(path):
 	with open(path, "rb") as f:
 		content = f.read(1024)
 		return bool(content.translate(None, textchars))
+
+
+def check_if_webform_exists(route):
+	return frappe.db.exists("Web Form", {"name": route.strip("/")}) or frappe.db.exists(
+		"Web Form", {"route": route.strip("/")}
+	)

@@ -182,6 +182,7 @@ frappe.Application = class Application {
 		}
 		frappe.router.on("change", () => {
 			$(".tooltip").hide();
+			if (frappe.frappe_toolbar && frappe.is_mobile()) frappe.frappe_toolbar.show_app_logo();
 		});
 	}
 
@@ -279,6 +280,8 @@ frappe.Application = class Application {
 			if (frappe.boot.print_css) {
 				frappe.dom.set_style(frappe.boot.print_css, "print-style");
 			}
+
+			frappe.boot.setup_complete = frappe.boot.sysdefaults["setup_complete"];
 			frappe.user.name = frappe.boot.user.name;
 			frappe.router.setup();
 		} else {
@@ -289,7 +292,7 @@ frappe.Application = class Application {
 	setup_workspaces() {
 		frappe.modules = {};
 		frappe.workspaces = {};
-		frappe.boot.allowed_workspaces = frappe.boot.sidebar_pages.pages;
+		frappe.boot.allowed_workspaces = frappe.boot.workspaces.pages;
 
 		for (let page of frappe.boot.allowed_workspaces || []) {
 			frappe.modules[page.module] = page;
@@ -380,6 +383,7 @@ frappe.Application = class Application {
 				if (r.exc) {
 					return;
 				}
+
 				me.redirect_to_login();
 			},
 		});
@@ -520,6 +524,8 @@ frappe.Application = class Application {
 							delete doc.name;
 							newdoc.idx = null;
 							newdoc.__run_link_triggers = false;
+							newdoc.on_paste_event = true;
+							newdoc = JSON.parse(JSON.stringify(newdoc));
 							frappe.set_route("Form", newdoc.doctype, newdoc.name);
 							frappe.dom.unfreeze();
 						});

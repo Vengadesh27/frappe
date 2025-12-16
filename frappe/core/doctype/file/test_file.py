@@ -20,7 +20,7 @@ from frappe.core.doctype.file.exceptions import FileTypeNotAllowed
 from frappe.core.doctype.file.utils import get_corrupted_image_msg, get_extension
 from frappe.desk.form.utils import add_comment
 from frappe.exceptions import ValidationError
-from frappe.tests import IntegrationTestCase, UnitTestCase
+from frappe.tests import IntegrationTestCase
 from frappe.utils import get_files_path, set_request
 
 if TYPE_CHECKING:
@@ -59,15 +59,6 @@ def make_test_image_file(private=False):
 		yield _test_file
 	finally:
 		_test_file.delete()
-
-
-class UnitTestFile(UnitTestCase):
-	"""
-	Unit tests for File.
-	Use this class for testing individual functions and methods.
-	"""
-
-	pass
 
 
 class TestSimpleFile(IntegrationTestCase):
@@ -967,3 +958,97 @@ class TestGuestFileAndAttachments(IntegrationTestCase):
 		self.assertEqual(doc_pri.get_content(), content)
 		doc_pri.delete()
 		self.assertFalse(os.path.exists(doc_pri.get_full_path()))
+
+
+class TestPublicFileRestriction(IntegrationTestCase):
+	"""Test public file upload restriction for non-System Managers."""
+
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		# Create a test user without System Manager role
+		if not frappe.db.exists("User", "test_restricted@example.com"):
+			user = frappe.get_doc(
+				{
+					"doctype": "User",
+					"email": "test_restricted@example.com",
+					"first_name": "Test Restricted",
+					"roles": [{"role": "Website Manager"}],
+				}
+			)
+			user.insert(ignore_permissions=True)
+
+	def tearDown(self):
+		frappe.set_user("Administrator")
+
+	@IntegrationTestCase.change_settings(
+		"System Settings", {"only_allow_system_managers_to_upload_public_files": 1}
+	)
+	def test_non_system_manager_cannot_upload_public_file_when_setting_enabled(self):
+		"""Non-System Manager should not be able to upload public files when setting is enabled."""
+		frappe.set_user("test_restricted@example.com")
+
+		file_doc = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": "test_public_restricted.txt",
+				"content": "Test content",
+				"is_private": 0,
+			}
+		)
+
+		self.assertRaises(frappe.PermissionError, file_doc.insert)
+
+	@IntegrationTestCase.change_settings(
+		"System Settings", {"only_allow_system_managers_to_upload_public_files": 1}
+	)
+	def test_non_system_manager_can_upload_private_file_when_setting_enabled(self):
+		"""Non-System Manager should still be able to upload private files when setting is enabled."""
+		frappe.set_user("test_restricted@example.com")
+
+		file_doc = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": "test_private_allowed.txt",
+				"content": "Test content",
+				"is_private": 1,
+			}
+		)
+
+		file_doc.insert()
+		self.assertTrue(file_doc.is_private)
+
+	@IntegrationTestCase.change_settings(
+		"System Settings", {"only_allow_system_managers_to_upload_public_files": 1}
+	)
+	def test_system_manager_can_upload_public_file_when_setting_enabled(self):
+		"""System Manager should be able to upload public files even when setting is enabled."""
+		frappe.set_user("Administrator")
+
+		file_doc = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": "test_public_admin.txt",
+				"content": "Test content",
+				"is_private": 0,
+			}
+		)
+
+		file_doc.insert()
+		self.assertFalse(file_doc.is_private)
+
+	def test_non_system_manager_can_upload_public_file_when_setting_disabled(self):
+		"""Non-System Manager should be able to upload public files when setting is disabled."""
+		frappe.set_user("test_restricted@example.com")
+
+		file_doc = frappe.get_doc(
+			{
+				"doctype": "File",
+				"file_name": "test_public_allowed.txt",
+				"content": "Test content",
+				"is_private": 0,
+			}
+		)
+
+		file_doc.insert()
+		self.assertFalse(file_doc.is_private)
