@@ -186,13 +186,38 @@ def auto_generate_icons_and_sidebar(app_name=None):
 	)
 
 	try:
-		print("Creating Desktop Icons")
-		create_desktop_icons()
 		print("Creating Workspace Sidebars")
 		create_workspace_sidebar_for_workspaces()
+		print("Creating Desktop Icons")
+		create_desktop_icons()
 		# Save the generated icons
 		frappe.db.commit()  # nosemgrep
 		# Save the genreated sidebar links
 		frappe.db.commit()  # nosemgrep
 	except Exception as e:
 		print(f"Error creating icons {e}")
+
+
+def delete_desktop_icon_and_sidebar(app_name, dry_run=False):
+	frappe.get_hooks(app_name=app_name)
+	app_title = frappe.get_hooks(app_name=app_name)["app_title"][0]
+	icons_to_be_deleted = frappe.get_all(
+		"Desktop Icon",
+		pluck="name",
+		or_filters=[
+			["Desktop Icon", "name", "=", app_title],
+			["Desktop Icon", "parent_icon", "=", app_title],
+		],
+	)
+	print("Deleting Desktop Icons")
+	for icon in icons_to_be_deleted:
+		frappe.delete_doc_if_exists("Desktop Icon", icon)
+	# Delete icons
+	sidebar_to_be_deleted = frappe.get_all("Workspace Sidebar", pluck="name", filters={"app": app_name})
+	print("Deleting Workspace Sidebars")
+	for icon in sidebar_to_be_deleted:
+		frappe.delete_doc_if_exists("Workspace Sidebar", icon)
+
+	if dry_run:
+		# Delete icons and sidebars
+		frappe.db.commit()  # nosemgrep

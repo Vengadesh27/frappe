@@ -2,6 +2,8 @@
 # License: MIT. See LICENSE
 import datetime
 import json
+import keyword
+import re
 import weakref
 from types import MappingProxyType
 from typing import TYPE_CHECKING, TypeVar
@@ -691,6 +693,14 @@ class BaseDocument:
 			None,
 		)
 
+	def _handle_hash_conflict(self):
+		"""Regenerate hash name in case of collisions"""
+		self.flags.retry_count = (self.flags.retry_count or 0) + 1
+		if self.flags.retry_count >= 5:
+			raise
+		self.name = None
+		return self.db_insert()
+
 	def db_insert(self, ignore_if_duplicate=False):
 		"""INSERT the document (with valid columns) in the database.
 
@@ -704,10 +714,17 @@ class BaseDocument:
 			set_new_name(self)
 
 		conflict_handler = ""
+		returning = ""
 		# On postgres we can't implcitly ignore PK collision
 		# So instruct pg to ignore `name` field conflicts
-		if ignore_if_duplicate and frappe.db.db_type == "postgres":
+		if (
+			(ignore_if_duplicate or self.meta.autoname == "hash")
+			and frappe.db.db_type == "postgres"
+			and (self.flags.retry_count or 0) < 5
+		):
 			conflict_handler = "on conflict (name) do nothing"
+			if self.meta.autoname == "hash":
+				returning = "RETURNING name"
 
 		if not self.creation:
 			self.creation = self.modified = now()
@@ -722,26 +739,26 @@ class BaseDocument:
 
 		columns = list(d)
 		try:
-			frappe.db.sql(
+			name = frappe.db.sql(
 				"""INSERT INTO `tab{doctype}` ({columns})
-					VALUES ({values}) {conflict_handler}""".format(
+					VALUES ({values}) {conflict_handler} {returning}""".format(
 					doctype=self.doctype,
 					columns=", ".join("`" + c + "`" for c in columns),
 					values=", ".join(["%s"] * len(columns)),
 					conflict_handler=conflict_handler,
+					returning=returning,
 				),
 				list(d.values()),
 			)
+			if (
+				frappe.db.db_type == "postgres" and self.meta.autoname == "hash" and not name
+			):  # To avoid a transaction block, we regen in try (pg specific)
+				return self._handle_hash_conflict()
 		except Exception as e:
 			if frappe.db.is_primary_key_violation(e):
 				if self.meta.autoname == "hash":
 					# hash collision? try again
-					self.flags.retry_count = (self.flags.retry_count or 0) + 1
-					if self.flags.retry_count > 5:
-						raise
-					self.name = None
-					self.db_insert()
-					return
+					return self._handle_hash_conflict()
 
 				if not ignore_if_duplicate:
 					frappe.msgprint(
@@ -785,7 +802,21 @@ class BaseDocument:
 				),
 				[*list(d.values()), name],
 			)
+
 		except Exception as e:
+			if frappe.db.is_data_too_long(e):
+				column = re.search(r"column\s+'([^']+)'", e.args[1])
+				if column:
+					label = self.get_label_from_fieldname(column.group(1))
+
+					# data too long for column
+					frappe.throw(
+						_(
+							"The value of the field {0} is too long in the {1} document. To resolve this issue, please reduce the value length or change the {0} field Type to Long Text using customize form, and then try again."
+						).format(frappe.bold(label), frappe.bold(self.doctype)),
+						title=_("Value Too Long"),
+					)
+
 			if frappe.db.is_unique_key_violation(e):
 				self.show_unique_validation_message(e)
 			else:
@@ -947,9 +978,7 @@ class BaseDocument:
 			if not docname:
 				continue
 
-			assert isinstance(docname, str | int) or (
-				isinstance(docname, list | tuple | set) and len(docname) == 1
-			), f"Unexpected value for field {df.fieldname}: {docname}"
+			assert isinstance(docname, str | int), f"Unexpected value for field {df.fieldname}: {docname}"
 
 			if df.fieldtype == "Link":
 				doctype = df.options

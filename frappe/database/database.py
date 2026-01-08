@@ -11,9 +11,9 @@ import warnings
 from collections.abc import Iterable, Sequence
 from contextlib import contextmanager, suppress
 from time import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
-from pypika.queries import QueryBuilder
+from pypika.queries import QueryBuilder, Table
 
 import frappe
 import frappe.defaults
@@ -27,6 +27,7 @@ from frappe.database.utils import (
 	Query,
 	QueryValues,
 	convert_to_value,
+	get_doctype_sort_info,
 	get_query_type,
 	is_query_type,
 )
@@ -313,6 +314,12 @@ class Database:
 
 		if auto_commit:
 			self.commit()
+
+		if self.db_type == "postgres" and getattr(self._cursor, "name", None):
+			"""named cursors in Postgres are lazy and don't retrieve column names immediately,
+			so explicitly performed here to avoid early exit during `unbuffered_cursor` usage
+			"""
+			self._cursor.fetchmany(0)
 
 		if not self._cursor.description:
 			return ()
@@ -637,7 +644,6 @@ class Database:
 					order_by=order_by,
 					distinct=distinct,
 					limit=limit,
-					validate_filters=True,
 					for_update=for_update,
 					skip_locked=skip_locked,
 					wait=True,
@@ -649,7 +655,6 @@ class Database:
 				try:
 					if order_by:
 						order_by = "creation" if order_by == DefaultOrderBy else order_by
-
 					query = frappe.qb.get_query(
 						table=doctype,
 						filters=filters,
@@ -660,7 +665,6 @@ class Database:
 						fields=fieldname,
 						distinct=distinct,
 						limit=limit,
-						validate_filters=True,
 					)
 					if isinstance(fieldname, str) and fieldname == "*":
 						as_dict = True
@@ -988,7 +992,6 @@ class Database:
 			table=dt,
 			filters=dn,
 			update=True,
-			validate_filters=True,
 		)
 
 		if isinstance(dn, FilterValue):
@@ -1089,22 +1092,22 @@ class Database:
 
 		Query will be built as:
 		```sql
-		UPDATE `tabItem`
+		UPDATE `tabTask`
 		SET `status` = CASE
-		    WHEN `name` = 'Item-1' THEN 'Close'
-		    WHEN `name` = 'Item-2' THEN 'Open'
-		    WHEN `name` = 'Item-3' THEN 'Close'
-		    WHEN `name` = 'Item-4' THEN 'Cancelled'
+		    WHEN `name` = 'TASK-0001' THEN 'Closed'
+		    WHEN `name` = 'TASK-0002' THEN 'Open'
+		    WHEN `name` = 'TASK-0003' THEN 'Closed'
+		    WHEN `name` = 'TASK-0004' THEN 'Cancelled'
 		    ELSE `status`
-		end,
+		END,
 		`description` = CASE
-		    WHEN `name` = 'Item-1' THEN 'This is the first task'
-		    WHEN `name` = 'Item-2' THEN 'This is the second task'
-		    WHEN `name` = 'Item-3' THEN 'This is the third task'
-		    WHEN `name` = 'Item-4' THEN 'This is the fourth task'
+		    WHEN `name` = 'TASK-0001' THEN 'This is the first task'
+		    WHEN `name` = 'TASK-0002' THEN 'This is the second task'
+		    WHEN `name` = 'TASK-0003' THEN 'This is the third task'
+		    WHEN `name` = 'TASK-0004' THEN 'This is the fourth task'
 		    ELSE `description`
-		end
-		WHERE  `name` IN ( 'Item-1', 'Item-2', 'Item-3', 'Item-4' )
+		END
+		WHERE `name` IN ('TASK-0001', 'TASK-0002', 'TASK-0003', 'TASK-0004');
 		```
 		"""
 		if not doc_updates:
@@ -1295,7 +1298,6 @@ class Database:
 			filters=filters,
 			fields=Count("*"),
 			distinct=distinct,
-			validate_filters=True,
 		).run(debug=debug)[0][0]
 
 		if not filters and cache:
@@ -1323,12 +1325,12 @@ class Database:
 
 		from frappe.utils import now_datetime
 
-		Table = frappe.qb.DocType(doctype)
+		dt = frappe.qb.DocType(doctype)
 
 		return (
-			frappe.qb.from_(Table)
-			.select(Count(Table.name))
-			.where(Table.creation >= now_datetime() - relativedelta(minutes=minutes))
+			frappe.qb.from_(dt)
+			.select(Count(dt.name))
+			.where(dt.creation >= now_datetime() - relativedelta(minutes=minutes))
 			.run()[0][0]
 		)
 
@@ -1426,7 +1428,6 @@ class Database:
 			table=doctype,
 			filters=filters,
 			delete=True,
-			validate_filters=True,
 		)
 		if "debug" not in kwargs:
 			kwargs["debug"] = debug

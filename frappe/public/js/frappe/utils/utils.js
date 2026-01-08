@@ -3,7 +3,6 @@
 
 import deep_equal from "fast-deep-equal";
 import number_systems from "./number_systems";
-import cloneDeepWith from "lodash/cloneDeepWith";
 
 frappe.provide("frappe.utils");
 
@@ -884,19 +883,40 @@ Object.assign(frappe.utils, {
 		};
 	},
 	debounce: function (func, wait, immediate) {
-		var timeout;
-		return function () {
-			var context = this,
-				args = arguments;
-			var later = function () {
-				timeout = null;
-				if (!immediate) func.apply(context, args);
-			};
+		var timeout, context, args;
+
+		var later = function () {
+			timeout = null;
+			if (!immediate) func.apply(context, args);
+		};
+
+		var debounced = function () {
+			context = this;
+			args = arguments;
 			var callNow = immediate && !timeout;
 			clearTimeout(timeout);
 			timeout = setTimeout(later, wait);
 			if (callNow) func.apply(context, args);
 		};
+
+		debounced.cancel = function () {
+			if (!timeout) return false;
+
+			clearTimeout(timeout);
+			timeout = null;
+			return true;
+		};
+
+		debounced.flush = function () {
+			if (!timeout) return false;
+
+			clearTimeout(timeout);
+			timeout = null;
+			func.apply(context, args);
+			return true;
+		};
+
+		return debounced;
 	},
 	get_form_link: function (
 		doctype,
@@ -999,10 +1019,6 @@ Object.assign(frappe.utils, {
 		return deep_equal(a, b);
 	},
 
-	deep_clone(obj, customizer) {
-		return cloneDeepWith(obj, customizer);
-	},
-
 	file_name_ellipsis(filename, length) {
 		let first_part_length = (length * 2) / 3;
 		let last_part_length = length - first_part_length;
@@ -1031,11 +1047,11 @@ Object.assign(frappe.utils, {
 		}
 		return decoded;
 	},
-	copy_to_clipboard(string) {
+	copy_to_clipboard(string, message) {
 		const show_success_alert = () => {
 			frappe.show_alert({
 				indicator: "green",
-				message: __("Copied to clipboard."),
+				message: message || __("Copied to clipboard."),
 			});
 		};
 		if (navigator.clipboard && window.isSecureContext) {
@@ -1237,7 +1253,94 @@ Object.assign(frappe.utils, {
 		},
 		image_path: "/assets/frappe/images/leaflet/",
 	},
+	get_route_for_icon(desktop_icon) {
+		let route;
+		if (!desktop_icon) return;
+		let item = {};
+		if (desktop_icon.link_type == "External" && desktop_icon.link) {
+			route = window.location.origin + desktop_icon.link;
+		} else {
+			let sidebar = frappe.boot.workspace_sidebar_item[desktop_icon.label.toLowerCase()];
+			if (desktop_icon.link_type == "Workspace Sidebar" && sidebar) {
+				let first_link = sidebar.items.find((i) => i.type == "Link");
+				if (first_link) {
+					if (first_link.link_type === "Report") {
+						let args = {
+							type: first_link.link_type,
+							name: first_link.link_to,
+						};
 
+						if (first_link.report || !frappe.app.sidebar.editor.edit_mode) {
+							args.is_query_report =
+								first_link.report.report_type === "Query Report" ||
+								first_link.report.report_type == "Script Report";
+							args.report_ref_doctype = first_link.report.ref_doctype;
+						}
+
+						route = frappe.utils.generate_route(args);
+					} else if (first_link.link_type == "Workspace") {
+						let workspaces = frappe.workspaces[frappe.router.slug(first_link.link_to)];
+						if (workspaces) {
+							if (workspaces.public) {
+								route = "/desk/" + frappe.router.slug(first_link.link_to);
+							} else {
+								route = "/desk/private/" + frappe.router.slug(workspaces.title);
+							}
+						}
+
+						if (first_link.route) {
+							route = first_link.route;
+						}
+					} else if (first_link.link_type === "URL") {
+						route = first_link.url;
+					} else if (first_link.link_type == "Page" && first_link.route_options) {
+						route = frappe.utils.generate_route({
+							type: first_link.link_type,
+							name: first_link.link_to,
+							route_options: JSON.parse(first_link.route_options),
+						});
+					} else {
+						route = frappe.utils.generate_route({
+							type: first_link.link_type,
+							name: first_link.link_to,
+							tab: first_link.tab,
+						});
+					}
+				}
+			}
+		}
+		return route;
+	},
+	desktop_icon(label, color, size) {
+		let letter = label.charAt(0).toUpperCase();
+		let icon_size = size ? size : "md";
+		let opacity_hex = "1A";
+		let icon_html = $(`
+			<div class="icon-container">
+				<svg fill="currentColor" class="desktop-alphabet icon text-ink-gray-7 icon-${icon_size}" stroke=none style="" aria-hidden="true">
+				<use class="" href="#${letter}"></use>
+				</svg>
+			</div>
+		`);
+		let pallete_color = this.desktop_pallete[color || "blue"];
+		let bg_color = pallete_color + opacity_hex;
+		let stroke_color = pallete_color;
+		if (frappe.boot.desktop_icon_style == "Solid") {
+			bg_color = stroke_color;
+			stroke_color = "var(--white)";
+		}
+		icon_html.css("backgroundColor", bg_color);
+		icon_html.find("svg").css("color", stroke_color);
+		return icon_html.get(0).outerHTML;
+	},
+	desktop_pallete: {
+		blue: "#0981E3",
+		gray: "#7B808A",
+	},
+	desktop_bg_color(color_name) {
+		let color_value = this.desktop_pallete[color_name];
+		color_value + "";
+	},
 	icon(
 		icon_name,
 		size = "sm",
@@ -1281,9 +1384,47 @@ Object.assign(frappe.utils, {
 	flag(country_code) {
 		return `<img loading="lazy" src="https://flagcdn.com/${country_code}.svg" width="20" height="15">`;
 	},
+
 	is_emoji(emoji_name) {
 		let emojiList = gemoji.map((emoji) => emoji.emoji);
 		return emojiList.includes(emoji_name);
+	},
+
+	get_desktop_icon(icon_name, variant) {
+		let exists = false;
+		let icon_data = this.get_desktop_icon_by_label(icon_name);
+		variant = variant.toLowerCase();
+		if (!icon_data?.app) return exists;
+		let app_name = icon_data.app;
+		let icon_url = `assets/${app_name}/icons/desktop_icons/${variant}/${frappe.scrub(
+			icon_name
+		)}.svg`;
+
+		if (
+			frappe.boot.desktop_icon_urls[app_name] &&
+			frappe.boot.desktop_icon_urls[app_name][variant].includes(icon_url)
+		) {
+			return `/${icon_url}`;
+		}
+		return exists;
+	},
+
+	desktop_icon_exists(app_name, url) {
+		let exists = false;
+		if (frappe.boot.desktop_icon_urls[app_name].includes(url)) exists = true;
+		return exists;
+	},
+	get_desktop_icon_by_label(title, filters) {
+		if (!filters) {
+			return frappe.boot.desktop_icons.find((f) => f.label === title);
+		} else {
+			return frappe.boot.desktop_icons.find((f) => {
+				return (
+					f.label === title &&
+					Object.keys(filters).every((key) => f[key] === filters[key])
+				);
+			});
+		}
 	},
 
 	make_chart(wrapper, custom_options = {}) {
@@ -1367,6 +1508,9 @@ Object.assign(frappe.utils, {
 						default:
 							route = doctype_slug;
 					}
+				}
+				if (item.tab) {
+					route += `#${item.tab}`;
 				}
 			} else if (type === "report") {
 				if (item.is_query_report) {
@@ -1715,10 +1859,19 @@ Object.assign(frappe.utils, {
 				// don't remove unless patch is created to convert all existing filters from object to array
 				// backward compatibility
 				if (Array.isArray(filters_json)) {
-					let filter = {};
-					filters_json.forEach((arr) => {
-						filter[arr[1]] = [arr[2], arr[3]];
-					});
+					let filter = filters_json.reduce((acc, filter) => {
+						const field = filter[1];
+						const value = [filter[2], filter[3]];
+
+						// if we have multiple filters for the same field,
+						// we convert it into an array
+						if (acc[field]) {
+							acc[field].push(value);
+						} else {
+							acc[field] = [value];
+						}
+						return acc;
+					}, {});
 					return filter || [];
 				}
 				return filters_json || [];
@@ -1911,5 +2064,19 @@ Object.assign(frappe.utils, {
 				hljs.highlightElement(this);
 			});
 		});
+	},
+
+	/**
+	 * Check if current user can upload public files.
+	 * @returns {boolean}
+	 */
+	can_upload_public_files() {
+		if (
+			Number(frappe.boot.sysdefaults?.only_allow_system_managers_to_upload_public_files) !==
+			1
+		) {
+			return true;
+		}
+		return frappe.user.has_role(["System Manager", "Administrator"]);
 	},
 });

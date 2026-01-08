@@ -60,6 +60,7 @@ class EmailQueue(Document):
 		message: DF.Code | None
 		message_id: DF.SmallText | None
 		priority: DF.Int
+		raw_html: DF.Check
 		recipients: DF.Table[EmailQueueRecipient]
 		reference_doctype: DF.Link | None
 		reference_name: DF.Data | None
@@ -518,6 +519,8 @@ class QueueBuilder:
 		email_read_tracker_url=None,
 		x_priority: Literal[1, 3, 5] = 3,
 		email_headers=None,
+		raw_html=False,
+		add_css=True,
 	):
 		"""Add email to sending queue (Email Queue)
 
@@ -545,6 +548,8 @@ class QueueBuilder:
 		:param email_read_tracker_url: A URL for tracking whether an email is read by the recipient.
 		:param x_priority: 1 = HIGHEST, 3 = NORMAL, 5 = LOWEST
 		:param email_headers: Additional headers to be added in the email, e.g. {"X-Custom-Header": "value"} or {"Custom-Header": "value"}. Automatically prepends "X-" to the header name if not present.
+		:param raw_html: Whether to treat email template as a complete HTML file
+		:param add_css: Add default CSS from hooks/email_css to the email template (default True)
 		"""
 
 		self._unsubscribe_method = unsubscribe_method
@@ -582,6 +587,8 @@ class QueueBuilder:
 		self.print_letterhead = print_letterhead
 		self.email_read_tracker_url = email_read_tracker_url
 		self.email_headers = email_headers
+		self.raw_html = raw_html
+		self.add_css = add_css
 
 	@property
 	def unsubscribe_method(self):
@@ -638,6 +645,8 @@ class QueueBuilder:
 			email_account=email_account,
 			unsubscribe_link=self.unsubscribe_message(),
 			with_container=self.with_container,
+			raw_html=self.raw_html,
+			add_css=self.add_css,
 		)
 
 	def should_include_unsubscribe_link(self):
@@ -664,7 +673,7 @@ class QueueBuilder:
 		if self._unsubscribed_user_emails is not None:
 			return self._unsubscribed_user_emails
 
-		all_ids = list(set(self.recipients + self.cc))
+		all_ids = list(set(self.recipients + self.cc + self.bcc))
 
 		EmailUnsubscribe = DocType("Email Unsubscribe")
 
@@ -698,6 +707,10 @@ class QueueBuilder:
 		unsubscribed_emails = self.get_unsubscribed_user_emails()
 		return [mail_id for mail_id in self.cc if mail_id not in unsubscribed_emails]
 
+	def final_bcc(self):
+		unsubscribed_emails = self.get_unsubscribed_user_emails()
+		return [mail_id for mail_id in self.bcc if mail_id not in unsubscribed_emails]
+
 	def get_attachments(self):
 		attachments = []
 		if self._attachments:
@@ -725,7 +738,7 @@ class QueueBuilder:
 			attachments=self._attachments,
 			reply_to=self.reply_to,
 			cc=self.final_cc(),
-			bcc=self.bcc,
+			bcc=self.final_bcc(),
 			email_account=email_account,
 			expose_recipients=self.expose_recipients,
 			inline_images=self.inline_images,
@@ -752,7 +765,7 @@ class QueueBuilder:
 		"""
 		final_recipients = self.final_recipients()
 		queue_separately = (final_recipients and self.queue_separately) or len(final_recipients) > 100
-		if not (final_recipients + self.final_cc()):
+		if not (final_recipients + self.final_cc() + self.final_bcc()):
 			return []
 
 		queue_data = self.as_dict(include_recipients=False)
@@ -760,7 +773,7 @@ class QueueBuilder:
 			return []
 
 		if not queue_separately:
-			recipients = list(set(final_recipients + self.final_cc() + self.bcc))
+			recipients = list(set(final_recipients + self.final_cc() + self.final_bcc()))
 			q = EmailQueue.new({**queue_data, **{"recipients": recipients}}, ignore_permissions=True)
 			send_now and q.send()
 			return q
@@ -786,7 +799,7 @@ class QueueBuilder:
 		frappe_mail_client = None
 		smtp_server_instance = None
 		for r in final_recipients:
-			recipients = list(set([r, *self.final_cc(), *self.bcc]))
+			recipients = list(set([r, *self.final_cc(), *self.final_bcc()]))
 			q = EmailQueue.new({**queue_data, **{"recipients": recipients}}, ignore_permissions=True)
 			if not frappe_mail_client and not smtp_server_instance:
 				email_account = q.get_email_account(raise_error=True)
@@ -836,9 +849,11 @@ class QueueBuilder:
 			"communication": self.communication,
 			"send_after": self.send_after,
 			"show_as_cc": ",".join(self.final_cc()),
-			"show_as_bcc": ",".join(self.bcc),
+			"show_as_bcc": ",".join(self.final_bcc()),
 			"email_account": email_account_name or None,
 			"email_read_tracker_url": self.email_read_tracker_url,
+			"raw_html": self.raw_html,
+			"add_css": self.add_css,
 		}
 
 		if include_recipients:

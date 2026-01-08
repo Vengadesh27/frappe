@@ -387,7 +387,7 @@ export default class GridRow {
 		if (this.configure_columns && this.frm) {
 			this.configure_columns_button = $(`
 				<div class="col grid-static-col pointer">
-					<a>${frappe.utils.icon("setting-gear", "sm", "", "filter: opacity(0.5)")}</a>
+					<a>${frappe.utils.icon("settings", "sm", "", "filter: opacity(0.5)")}</a>
 				</div>
 			`)
 				.appendTo(this.row)
@@ -1211,13 +1211,22 @@ export default class GridRow {
 		// sync get_query
 		field.get_query = this.grid.get_field(df.fieldname).get_query;
 		// df.onchange is common for all rows in grid
-		let field_on_change_function = df.onchange;
-		field.df.change = (e) => {
-			this.refresh_dependency();
-			// trigger onchange with current grid row field as "this"
-			field_on_change_function && field_on_change_function.apply(field, [e]);
-			me.refresh_field(field.df.fieldname);
-		};
+		let field_onchange_function = df.onchange;
+		let field_change_function = df.change;
+
+		if (!field.df.change) {
+			field.df.change = (e) => {
+				this.refresh_dependency();
+				// trigger onchange with current grid row field as "this"
+				if (field_onchange_function) {
+					field_onchange_function.apply(field, [e]);
+				} else if (field_change_function) {
+					field_change_function.apply(field, [e]);
+				}
+
+				me.refresh_field(field.df.fieldname);
+			};
+		}
 
 		field.refresh();
 		if (field.$input) {
