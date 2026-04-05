@@ -9,17 +9,13 @@ import requests
 
 import frappe
 from frappe import _
+from frappe.utils.data import cint
+from frappe.utils.print_utils import find_or_download_chromium_executable
 
 # TODO: close browser when worker is killed.
 
 
 class ChromePDFGenerator:
-	EXECUTABLE_PATHS: ClassVar[dict[str, list[str]]] = {
-		"linux": ["chrome-linux", "headless_shell"],
-		"darwin": ["chrome-mac", "headless_shell"],
-		"windows": ["chrome-win", "headless_shell.exe"],
-	}
-
 	_instance = None
 
 	_browsers: ClassVar[list] = []
@@ -62,8 +58,6 @@ class ChromePDFGenerator:
 			self._devtools_url = self.CHROMIUM_WEBSOCKET_URL
 			return
 
-		# only when we want to use chromium from a specific path ( incase we don't have chromium in bench folder )
-		self.CHROMIUM_BINARY_PATH = site_config.get("chromium_binary_path", "")
 		"""
 		Number of allowed open websocket connections to chromium.
 		This number will basically define how many concurrent requests can be handled by one chromium instance.
@@ -76,38 +70,13 @@ class ChromePDFGenerator:
 		self.USE_PERSISTENT_CHROMIUM = site_config.get("use_persistent_chromium", False)
 		#  time to wait for chromium to start and provide dev tools url used in _set_devtools_url.
 		self.START_TIMEOUT = site_config.get("chromium_start_timeout", 3)
+		# Allow a single PDF request to opt into interactive Chromium debugging in developer mode only.
+		self.debug_mode = frappe.conf.developer_mode and bool(frappe.form_dict.get("pdf_debug"))
 
-		self._chromium_path = (
-			self._find_chromium_executable() if not self.CHROMIUM_BINARY_PATH else self.CHROMIUM_BINARY_PATH
-		)
+		self._chromium_path = find_or_download_chromium_executable()
 		if self._verify_chromium_installation():
 			if not self._devtools_url:
-				self.start_chromium_process()
-
-	def _find_chromium_executable(self):
-		"""Finds the Chromium executable or raises an error if not found."""
-		bench_path = frappe.utils.get_bench_path()
-		"""Determine the path to the Chromium executable. chromium is downloaded by download_chromium in print_designer/install.py"""
-		chromium_dir = os.path.join(bench_path, "chromium")
-
-		if not os.path.exists(chromium_dir):
-			frappe.throw(_("Chromium is not downloaded. Please run the setup first."))
-
-		platform_name = platform.system().lower()
-
-		if platform_name not in ["linux", "darwin", "windows"]:
-			frappe.throw(f"Unsupported platform: {platform_name}")
-
-		executable_name = self.EXECUTABLE_PATHS.get(platform_name)
-
-		# Construct the full path to the executable
-		exec_path = Path(chromium_dir).joinpath(*executable_name)
-		if not exec_path.exists():
-			frappe.throw(
-				f"Chromium executable not found: {exec_path}. please run bench setup-new-pdf-backend"
-			)
-
-		return str(exec_path)
+				self.start_chromium_process(debug=self.debug_mode)
 
 	def _verify_chromium_installation(self):
 		"""Ensures Chromium is available and executable, raising clearer errors if not."""
@@ -264,6 +233,19 @@ class ChromePDFGenerator:
 		self._chromium_process = None
 		self._devtools_url = None
 		frappe.log("Headless Chromium closed successfully.")
+
+	def detach_debug_browser(self):
+		"""
+		Detach the generator from an interactive debug Chromium process.
+
+		This keeps the debug browser window available for inspection, while ensuring
+		the next PDF request starts with a fresh generator/process instead of reusing
+		the old debug session.
+		"""
+		ChromePDFGenerator._instance = None
+		self._initialized = False
+		self._chromium_process = None
+		self._devtools_url = None
 
 	# not used anywhere in the code. read _set_devtools_url for more info.  useful in case we want to take different approch to fetch devtools url.
 	def fetch_devtools_url(self, port):

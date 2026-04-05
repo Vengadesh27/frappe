@@ -62,14 +62,14 @@ frappe.views.ListFactory = class ListFactory extends frappe.views.Factory {
 			last_route[1] === doctype
 		) {
 			// last route same as this route, so going back.
-			// this happens because /app/List/Item will redirect to /app/List/Item/List
+			// this happens because /desk/List/Item will redirect to /desk/List/Item/List
 			// while coming from back button, the last 2 routes will be same, so
 			// we know user is coming in the reverse direction (via back button)
 
 			// example:
-			// Step 1: /app/List/Item redirects to /app/List/Item/List
-			// Step 2: User hits "back" comes back to /app/List/Item
-			// Step 3: Now we cannot send the user back to /app/List/Item/List so go back one more step
+			// Step 1: /desk/List/Item redirects to /desk/List/Item/List
+			// Step 2: User hits "back" comes back to /desk/List/Item
+			// Step 3: Now we cannot send the user back to /desk/List/Item/List so go back one more step
 			window.history.go(-1);
 			return true;
 		}

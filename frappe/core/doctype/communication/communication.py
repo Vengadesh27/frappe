@@ -230,7 +230,7 @@ class Communication(Document, CommunicationEmailMixin):
 		html_signature = soup.find("div", {"class": "ql-editor read-mode"})
 		_signature = None
 		if html_signature:
-			_signature = html_signature.renderContents()
+			_signature = html_signature.encode_contents()
 
 		if (cstr(_signature) or signature) not in self.content:
 			self.content = f'{self.content}</p><br><p class="signature">{signature}'
@@ -419,7 +419,7 @@ class Communication(Document, CommunicationEmailMixin):
 		# Skip timeline links if a "Sent" communication already exists
 		# else will create duplicate timeline entries
 		if self.sent_or_received == "Received" and self.find_one_by_filters(
-			message_id=self.message_id, sent_or_received="Sent"
+			message_id=self.message_id, email_account=self.email_account, sent_or_received="Sent"
 		):
 			return
 

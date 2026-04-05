@@ -189,9 +189,9 @@ frappe.views.BaseList = class BaseList {
 	setup_view_menu() {
 		if (frappe.boot.desk_settings.view_switcher && !this.meta.force_re_route_to_default_view) {
 			const icon_map = {
-				Image: "image-view",
+				Image: "image",
 				List: "list",
-				Report: "small-file",
+				Report: "sheet",
 				Calendar: "calendar",
 				Gantt: "gantt",
 				Kanban: "kanban",
@@ -275,16 +275,15 @@ frappe.views.BaseList = class BaseList {
 		frappe.breadcrumbs.add(this.meta.module, this.doctype);
 	}
 
-	show_or_hide_sidebar() {
-		let show_sidebar = JSON.parse(localStorage.show_sidebar || "true");
-		$(document.body).toggleClass("no-list-sidebar", !show_sidebar);
+	hide_sidebar() {
+		$(document.body).toggleClass("no-list-sidebar", true);
 	}
 
 	setup_main_section() {
 		return frappe.run_serially(
 			[
 				this.setup_list_wrapper,
-				this.show_or_hide_sidebar,
+				this.hide_sidebar,
 				this.setup_filter_area,
 				this.setup_sort_selector,
 				this.setup_result_container_area,
@@ -435,10 +434,10 @@ frappe.views.BaseList = class BaseList {
 		this.$result[0].style.removeProperty("height");
 		// place it at the footer of the page
 
-		const resultContainerHeight =
-			window.innerHeight -
-			this.$result.get(0).offsetTop -
-			this.$paging_area.get(0).offsetHeight;
+		let resultContainerHeight = window.innerHeight - this.$paging_area.get(0).offsetHeight;
+		if (!frappe.is_mobile()) {
+			resultContainerHeight = resultContainerHeight - this.$result.get(0).offsetTop;
+		}
 		this.$result.parent(".result-container").css({
 			height: resultContainerHeight - (frappe.is_mobile() ? 100 : 0) + "px",
 		});
@@ -647,14 +646,21 @@ class FilterArea {
 		this.setup();
 		if (frappe.is_mobile()) this.setup_mobile(list_view);
 	}
+
 	setup_mobile(list_view) {
 		const me = this;
 		this.standard_filters_visible = false;
-		this.standard_filters_wrapper.hide();
+		this.standard_filters_wrapper?.hide();
 		this.list_view.page.page_form.css("justify-content", "flex-end");
+		list_view.page.page_form.addClass("flex-column");
+		this.$filter_list_wrapper.addClass("justify-between p-0");
+
+		// added this to manage spaceing between filter and sorf area
+		this.$filter_list_wrapper.find(".filter-selector").css("margin", "0 0 0 auto");
+
 		$(`<button class="filter-toggle btn btn-default btn-sm filter-button">
 					<span class="filter-icon button-icon">
-						${frappe.utils.icon("funnel-plus")}
+						${frappe.utils.icon("chevrons-up-down")}
 					</span>
 				</button>
 			</div>`)
@@ -674,11 +680,6 @@ class FilterArea {
 			this.standard_filters_visible = true;
 			this.standard_filters_wrapper.show();
 		}
-		let icon_name = !this.standard_filters_visible ? "funnel-plus" : "funnel-x";
-		this.$filter_list_wrapper
-			.find(".filter-toggle")
-			.find("use")
-			.attr("href", `#icon-${icon_name}`);
 	}
 
 	setup() {
@@ -1127,13 +1128,22 @@ class FilterArea {
 		let fields = [];
 
 		if (!this.list_view.settings.hide_name_filter) {
-			fields.push({
+			let field = {
 				fieldtype: "Data",
 				label: "ID",
 				condition: "like",
 				fieldname: "name",
 				onchange: () => this.debounced_refresh_list_view(),
-			});
+			};
+
+			if (frappe.is_mobile()) {
+				let mobile_id_filter = this.$filter_list_wrapper.append(
+					`<div class="mobile-id-filter"></div>`
+				);
+				this.list_view.page.add_field(field, mobile_id_filter.find(".mobile-id-filter"));
+			} else {
+				fields.push(field);
+			}
 		}
 
 		if (
@@ -1215,9 +1225,21 @@ class FilterArea {
 						onchange: () => this.debounced_refresh_list_view(),
 						ignore_link_validation: fieldtype === "Dynamic Link",
 						is_filter: 1,
+						link_filters: df.link_filters,
 					};
 				})
 		);
+
+		// sort fields to move checkboxes at the end
+		fields.sort((a, b) => {
+			if (a.fieldtype === "Check" && b.fieldtype !== "Check") {
+				return 1;
+			} else if (a.fieldtype !== "Check" && b.fieldtype === "Check") {
+				return -1;
+			} else {
+				return 0;
+			}
+		});
 
 		fields.map((df) => {
 			this.list_view.page.add_field(df, this.standard_filters_wrapper);
@@ -1248,7 +1270,13 @@ class FilterArea {
 			const $input = field.$wrapper.find("input").first();
 			if (!$input.length || $input.closest(".input-group").length) return;
 
-			const getSymbol = (match_type) => (match_type === "=" ? "=" : "≈");
+			const getIcon = (match_type) => {
+				if (match_type === "=") {
+					return frappe.utils.icon("equal");
+				} else {
+					return frappe.utils.icon("equal-approximately");
+				}
+			};
 
 			$input.wrap('<div class="input-group"></div>');
 			const $inputGroup = $input.parent();
@@ -1260,7 +1288,7 @@ class FilterArea {
 					data-toggle="dropdown"
 					aria-haspopup="true"
 					aria-expanded="false">
-					${getSymbol(df.match_type || "≈")}
+					${getIcon(df.match_type || "≈")}
 
 				</button>
 				<ul class="dropdown-menu match-type-dropdown-menu dropdown-menu-right">
@@ -1283,14 +1311,17 @@ class FilterArea {
 				if (new_type === current_type) return;
 
 				field.df.match_type = new_type;
-				$dropdown.find("button").html(`${getSymbol(new_type)}`);
+				$dropdown.find("button").html(getIcon(new_type));
 
 				let value = field.get_value?.();
 				if (new_type === "=" && value) {
 					field.set_value(value.replace(/^%+|%+$/g, ""));
 				}
 
-				this.debounced_refresh_list_view();
+				// Only trigger refresh if field has a value
+				if (value) {
+					this.debounced_refresh_list_view();
+				}
 			});
 		}, 100);
 	}

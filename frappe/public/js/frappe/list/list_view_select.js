@@ -75,7 +75,9 @@ frappe.views.ListViewSelect = class ListViewSelect {
 				action: () => this.set_route("dashboard"),
 			},
 			Calendar: {
-				condition: frappe.views.calendar[this.doctype],
+				condition:
+					frappe.views.calendar[this.doctype] ||
+					frappe.get_meta(this.doctype).is_calendar_and_gantt,
 				action: () => this.set_route("calendar", "default"),
 				current_view_handler: () => {
 					this.get_calendars().then((calendars) => {
@@ -84,7 +86,9 @@ frappe.views.ListViewSelect = class ListViewSelect {
 				},
 			},
 			Gantt: {
-				condition: frappe.views.calendar[this.doctype],
+				condition:
+					frappe.views.calendar[this.doctype] ||
+					frappe.get_meta(this.doctype).is_calendar_and_gantt,
 				action: () => this.set_route("gantt"),
 			},
 			Inbox: {
@@ -204,8 +208,8 @@ frappe.views.ListViewSelect = class ListViewSelect {
 				if (!r.ref_doctype || r.ref_doctype == this.doctype) {
 					const report_type =
 						r.report_type === "Report Builder"
-							? `/app/list/${r.ref_doctype}/report`
-							: "/app/query-report";
+							? `/desk/list/${r.ref_doctype}/report`
+							: "/desk/query-report";
 
 					const route = r.route || report_type + "/" + (r.title || r.name);
 
@@ -286,13 +290,13 @@ frappe.views.ListViewSelect = class ListViewSelect {
 					// has standard calendar view
 					calendars.push({
 						name: "Default",
-						route: `/app/${this.slug()}/view/calendar/default`,
+						route: `/desk/${this.slug()}/view/calendar/default`,
 					});
 				}
 				result.map((calendar) => {
 					calendars.push({
 						name: calendar.name,
-						route: `/app/${this.slug()}/view/calendar/${calendar.name}`,
+						route: `/desk/${this.slug()}/view/calendar/${calendar.name}`,
 					});
 				});
 
@@ -306,7 +310,7 @@ frappe.views.ListViewSelect = class ListViewSelect {
 		accounts.forEach((account) => {
 			let email_account =
 				account.email_id == "All Accounts" ? "All Accounts" : account.email_account;
-			let route = `/app/communication/view/inbox/${email_account}`;
+			let route = `/desk/communication/view/inbox/${email_account}`;
 			let display_name = ["All Accounts", "Sent Mail", "Spam", "Trash"].includes(
 				account.email_id
 			)

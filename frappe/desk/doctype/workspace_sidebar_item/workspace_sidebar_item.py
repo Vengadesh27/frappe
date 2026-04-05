@@ -23,6 +23,8 @@ class WorkspaceSidebarItem(Document):
 		label: DF.Data | None
 		link_to: DF.DynamicLink | None
 		link_type: DF.Literal["DocType", "Page", "Report", "Workspace", "Dashboard", "URL"]
+		navigate_to_tab: DF.Autocomplete | None
+		open_in_new_tab: DF.Check
 		parent: DF.Data
 		parentfield: DF.Data
 		parenttype: DF.Data

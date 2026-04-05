@@ -13,6 +13,7 @@ class CustomizeFormField(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		alignment: DF.Literal["", "Left", "Center", "Right"]
 		allow_bulk_edit: DF.Check
 		allow_in_quick_entry: DF.Check
 		allow_on_submit: DF.Check
@@ -90,6 +91,7 @@ class CustomizeFormField(Document):
 		length: DF.Int
 		link_filters: DF.JSON | None
 		mandatory_depends_on: DF.Code | None
+		mask: DF.Check
 		no_copy: DF.Check
 		non_negative: DF.Check
 		options: DF.SmallText | None
@@ -107,6 +109,7 @@ class CustomizeFormField(Document):
 		remember_last_selected_value: DF.Check
 		report_hide: DF.Check
 		reqd: DF.Check
+		set_only_once: DF.Check
 		show_dashboard: DF.Check
 		sort_options: DF.Check
 		translatable: DF.Check
